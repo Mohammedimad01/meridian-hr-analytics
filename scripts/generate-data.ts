@@ -53,7 +53,7 @@ import {
   type StageCounts,
 } from "../lib/types";
 
-const SEED = 20260930;
+const SEED = Number(process.env.SEED ?? 202);
 faker.seed(SEED);
 
 /* ------------------------------------------------------------------ */
@@ -410,7 +410,7 @@ function createPerson(opts: {
     manager: null,
     source,
     retentionFactor:
-      source === "Employee referral" ? 0.7 : source === "Recruitment agency" ? 1.1 : 1,
+      source === "Employee referral" ? 0.55 : source === "Recruitment agency" ? 1.15 : 1,
   };
   people.push(person);
   return person;
@@ -901,6 +901,7 @@ const onboarding: OnboardingRecord[] = joiners.map((p) => {
 /* Compliance                                                          */
 /* ------------------------------------------------------------------ */
 
+const HISTORY_START = parseISO("2024-07-01");
 const INSURERS = ["Gulf Mutual Assurance", "Al Waha Insurance", "Crescent General Insurance"];
 const credentials: Credential[] = [];
 let credSeq = 1;
@@ -910,26 +911,24 @@ for (const p of activeAtAsOf) {
   const site = SITES.find((s) => s.id === p.siteId)!;
   const insurer = faker.helpers.arrayElement(INSURERS);
   for (const type of ["Medical licence", "Malpractice insurance"] as const) {
-    // Anniversary of the credential, then a renewal lead time (days before expiry).
-    const anniversary = addDays(asOf, intBetween(-60, 365));
+    // Annual validity cycles that end on the same anniversary each year. Each
+    // renewal happens `lead` days before the cycle ends (negative = late) and
+    // is drawn independently per cycle, so the history is stationary.
     let leadMean = 28;
     if (site.regulator === "MOHAP") leadMean -= 10;
     if (p.siteId === "nahda") leadMean -= 8;
-    // Most holders renew ahead of expiry; a minority renew late.
-    const lead = Math.round(chance(0.14) ? normal(-14, 14) : normal(leadMean, 16));
-    let expiry: Date;
-    let previous: Date;
-    let renewedOn: Date;
-    if (differenceInCalendarDays(asOf, addDays(anniversary, -lead)) >= 0) {
-      expiry = addDays(anniversary, 365);
-      previous = anniversary;
-      renewedOn = addDays(anniversary, -lead);
-    } else {
-      expiry = anniversary;
-      previous = addDays(anniversary, -365);
-      renewedOn = addDays(previous, -Math.round(normal(28, 18)));
+    const drawLead = () => clamp(Math.round(chance(0.14) ? normal(-14, 14) : normal(leadMean, 16)), -55, 80);
+    const phase = addDays(asOf, intBetween(-60, 304));
+    const ends = [-3, -2, -1, 0, 1].map((k) => addDays(phase, k * 365));
+    const renewals = ends.map((e) => addDays(e, -drawLead()));
+    const cycles: { from: string; to: string }[] = [];
+    for (let i = 1; i < ends.length; i++) {
+      const from = renewals[i - 1]!;
+      if (from > asOf) break; // not renewed yet
+      if (ends[i]! < HISTORY_START) continue;
+      cycles.push({ from: iso(from), to: iso(ends[i]!) });
     }
-    if (renewedOn < p.hireDate) renewedOn = addDays(p.hireDate, -intBetween(5, 30));
+    const current = cycles[cycles.length - 1]!;
     credentials.push({
       id: `CR-${String(credSeq++).padStart(5, "0")}`,
       employeeId: p.id,
@@ -939,10 +938,10 @@ for (const p of activeAtAsOf) {
       siteId: p.siteId,
       type,
       issuer: type === "Medical licence" ? site.regulator : insurer,
-      expiryDate: iso(expiry),
-      previousExpiryDate: iso(previous),
-      renewedOn: iso(renewedOn),
+      expiryDate: current.to,
+      renewedOn: current.from,
       trackedFrom: iso(p.hireDate),
+      cycles,
     });
   }
 }
@@ -1113,4 +1112,10 @@ for (const src of SOURCE_LIST) {
 const now = (c: Credential) => differenceInCalendarDays(parseISO(c.expiryDate), asOf);
 console.log(`Credentials: ${credentials.length}; overdue ${credentials.filter((c) => now(c) < 0).length}; <=30d ${credentials.filter((c) => now(c) >= 0 && now(c) <= 30).length}; 31-60d ${credentials.filter((c) => now(c) > 30 && now(c) <= 60).length}; 61-90d ${credentials.filter((c) => now(c) > 60 && now(c) <= 90).length}`);
 console.log(`ILOE: ${["Registered", "Pending", "Not registered"].map((s) => `${s} ${iloe.filter((i) => i.status === s).length}`).join(", ")}`);
+{
+  const cutoff = addDays(asOf, -365);
+  const cohort = people.filter((p) => p.source && p.hireDate <= cutoff);
+  const early = (rows: Person[]) => rows.filter((p) => p.exitDate && differenceInCalendarDays(p.exitDate, p.hireDate) < 365).length / Math.max(1, rows.length);
+  console.log(`First-year attrition: referral ${pct(early(cohort.filter((p) => p.source === "Employee referral")))} vs other ${pct(early(cohort.filter((p) => p.source !== "Employee referral")))}`);
+}
 console.log(`Onboarding records: ${onboarding.length}; pulse rows ${pulse.length}; check-in rows ${checkIns.length}`);

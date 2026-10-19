@@ -172,12 +172,12 @@ export interface Credential {
   issuer: string;
   /** Current validity end. In the past means expired and not yet renewed. */
   expiryDate: string;
-  /** Validity end of the previous cycle. */
-  previousExpiryDate: string;
   /** When the current validity period was obtained. */
   renewedOn: string;
   /** The holder's start date; the item is only tracked from this date. */
   trackedFrom: string;
+  /** Validity history, oldest first; the last entry is the current cycle. */
+  cycles: { from: string; to: string }[];
 }
 
 export type IloeStatus = "Registered" | "Pending" | "Not registered";

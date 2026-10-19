@@ -79,9 +79,9 @@ function credential(partial: Partial<Credential>): Credential {
     type: "Medical licence",
     issuer: "DHA",
     expiryDate: "2026-12-31",
-    previousExpiryDate: "2025-12-31",
     renewedOn: "2025-12-01",
     trackedFrom: "2020-01-01",
+    cycles: [{ from: "2025-12-01", to: "2026-12-31" }],
     ...partial,
   };
 }
@@ -298,14 +298,25 @@ describe("expiryBucket", () => {
 });
 
 describe("compliance at risk", () => {
-  const renewedEarly = credential({ expiryDate: "2027-10-10", previousExpiryDate: "2026-10-10", renewedOn: "2026-09-01" });
-  const notRenewed = credential({ expiryDate: "2026-10-15", previousExpiryDate: "2025-10-15", renewedOn: "2025-09-20" });
-  const lapsed = credential({ expiryDate: "2026-09-10", previousExpiryDate: "2025-09-10", renewedOn: "2025-08-20" });
-  const newJoiner = credential({ trackedFrom: "2026-09-15", renewedOn: "2026-09-01", expiryDate: "2027-09-01", previousExpiryDate: "2026-09-01" });
+  // Renewed on 1 Sep 2026, ahead of its 10 Oct 2026 expiry.
+  const renewedEarly = credential({
+    cycles: [
+      { from: "2024-09-05", to: "2025-10-10" },
+      { from: "2025-09-20", to: "2026-10-10" },
+      { from: "2026-09-01", to: "2027-10-10" },
+    ],
+  });
+  // Expires 15 Oct 2026, renewal not yet on file.
+  const notRenewed = credential({ cycles: [{ from: "2025-09-20", to: "2026-10-15" }] });
+  // Lapsed on 10 Sep 2026.
+  const lapsed = credential({ cycles: [{ from: "2025-08-20", to: "2026-09-10" }] });
+  // Joined 15 Sep 2026 with a licence obtained on 1 Sep.
+  const newJoiner = credential({ trackedFrom: "2026-09-15", cycles: [{ from: "2026-09-01", to: "2027-09-01" }] });
 
   it("uses the renewal history to know which expiry applied on a date", () => {
     expect(expiryOn(renewedEarly, "2026-09-30")).toBe("2027-10-10");
     expect(expiryOn(renewedEarly, "2026-08-31")).toBe("2026-10-10");
+    expect(expiryOn(renewedEarly, "2025-09-01")).toBe("2025-10-10");
     expect(expiryOn(newJoiner, "2026-09-01")).toBeNull();
   });
 
@@ -313,6 +324,9 @@ describe("compliance at risk", () => {
     expect(atRiskCount([renewedEarly, notRenewed, lapsed, newJoiner], "2026-09-30")).toBe(2);
     // A month earlier only the lapsed item was inside its 30-day window.
     expect(atRiskCount([renewedEarly, notRenewed, lapsed, newJoiner], "2026-08-31")).toBe(1);
+    // Before its 20 Sep 2025 renewal, the early renewer was inside the window.
+    expect(atRiskCount([renewedEarly], "2025-10-01")).toBe(0);
+    expect(atRiskCount([renewedEarly], "2025-09-15")).toBe(1);
   });
 
   it("buckets items as at a date", () => {

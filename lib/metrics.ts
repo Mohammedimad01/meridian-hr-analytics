@@ -392,7 +392,7 @@ export function funnelTotals(reqs: Requisition[], source?: Source): StageCounts 
   for (const r of reqs) {
     for (const [s, counts] of Object.entries(r.funnel) as [Source, StageCounts][]) {
       if (source && s !== source) continue;
-      counts.forEach((c, i) => (out[i] += c));
+      for (let i = 0; i < 5; i++) out[i] = out[i]! + counts[i]!;
     }
   }
   return out;
@@ -442,6 +442,11 @@ export function sourceEffectiveness(reqs: Requisition[]): SourceStats[] {
       shareOfHires: ratio(hired.length, totalHires),
     };
   }).sort((a, b) => (b.conversion ?? 0) - (a.conversion ?? 0));
+}
+
+/** Days a requisition has been (or was) open. */
+export function daysOpen(r: Requisition, asOf: string): number {
+  return daysBetween(r.openedAt, r.closedAt ?? asOf);
 }
 
 /** Furthest stage reached by an open requisition's pipeline. */
@@ -518,8 +523,13 @@ export function expiryBucket(expiryDate: string, on: string): ExpiryBucket {
  * Null if the holder had not joined yet.
  */
 export function expiryOn(c: Credential, on: string): string | null {
-  if (on < c.trackedFrom) return null;
-  return on >= c.renewedOn ? c.expiryDate : c.previousExpiryDate;
+  if (on < c.trackedFrom || c.cycles.length === 0) return null;
+  let expiry = c.cycles[0]!.to;
+  for (const cycle of c.cycles) {
+    if (cycle.from > on) break;
+    expiry = cycle.to;
+  }
+  return expiry;
 }
 
 /** At risk = expired, or expiring within 30 days, without a renewal on file. */
