@@ -1,0 +1,82 @@
+{
+  "organisation": "Meridian Health Group",
+  "asOf": "2026-09-30",
+  "firstMonth": "2024-10",
+  "lastMonth": "2026-09",
+  "seed": 20260930,
+  "generatedAt": "2026-09-30",
+  "sites": [
+    {
+      "id": "barsha",
+      "name": "Meridian Hospital Al Barsha",
+      "short": "Al Barsha Hospital",
+      "emirate": "Dubai",
+      "type": "Hospital",
+      "regulator": "DHA"
+    },
+    {
+      "id": "jumeirah",
+      "name": "Meridian Clinic Jumeirah",
+      "short": "Jumeirah",
+      "emirate": "Dubai",
+      "type": "Clinic",
+      "regulator": "DHA"
+    },
+    {
+      "id": "mirdif",
+      "name": "Meridian Clinic Mirdif",
+      "short": "Mirdif",
+      "emirate": "Dubai",
+      "type": "Clinic",
+      "regulator": "DHA"
+    },
+    {
+      "id": "marina",
+      "name": "Meridian Clinic Dubai Marina",
+      "short": "Dubai Marina",
+      "emirate": "Dubai",
+      "type": "Clinic",
+      "regulator": "DHA"
+    },
+    {
+      "id": "nahda",
+      "name": "Meridian Clinic Al Nahda",
+      "short": "Al Nahda",
+      "emirate": "Sharjah",
+      "type": "Clinic",
+      "regulator": "MOHAP"
+    },
+    {
+      "id": "majaz",
+      "name": "Meridian Clinic Al Majaz",
+      "short": "Al Majaz",
+      "emirate": "Sharjah",
+      "type": "Clinic",
+      "regulator": "MOHAP"
+    },
+    {
+      "id": "muwaileh",
+      "name": "Meridian Clinic Muwaileh",
+      "short": "Muwaileh",
+      "emirate": "Sharjah",
+      "type": "Clinic",
+      "regulator": "MOHAP"
+    },
+    {
+      "id": "khalifa",
+      "name": "Meridian Clinic Khalifa City",
+      "short": "Khalifa City",
+      "emirate": "Abu Dhabi",
+      "type": "Clinic",
+      "regulator": "DOH"
+    },
+    {
+      "id": "reem",
+      "name": "Meridian Clinic Al Reem",
+      "short": "Al Reem",
+      "emirate": "Abu Dhabi",
+      "type": "Clinic",
+      "regulator": "DOH"
+    }
+  ]
+}
